@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Nim Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div id="menu-overlay">
+        <div id="menu-container">
+            <h2>Jogo de Nim Online</h2>
+            <p style="color: #bdc3c7; margin-bottom: 20px;">Desafie jogadores reais!</p>
+            
+            <button id="start-game-btn">Procurar Partida Online</button>
+        </div>
+    </div>
+
+    <div id="game-area">
+        <div id="game-container" class="hidden">
+            <h1>Jogo de Nim</h1>
+            
+            <div id="game-info">
+                <h2 id="status-message">Aguardando...</h2>
+            </div>
+    
+            <div id="game-board">
+                <div id="heaps-container">
+                    </div>
+            </div>
+    
+            <div id="controls">
+                <button id="confirm-move-btn">Confirmar Jogada</button>
+            </div>
+        </div>
+    </div>
+
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-comments"></i> Chat Global</h3>
+            <span class="online-status"><span class="dot"></span> Online</span>
+        </div>
+
+        <div id="chat-messages">
+            <div class="message system">
+                <span class="msg-text">Bem-vindo ao chat!</span>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Digite..." autocomplete="off">
+            <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </aside>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
