@@ -2,25 +2,46 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jogo de Nim Online</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
+    <button id="theme-toggle" title="Alternar Tema">
+        <i class="fas fa-moon"></i>
+    </button>
+
     <div id="menu-overlay">
-        <div id="menu-container">
+        <div id="main-menu" class="menu-box">
             <h2>Jogo de Nim</h2>
-            <p style="color: #bdc3c7; margin-bottom: 20px;">Escolha seu modo de jogo:</p>
+            <p class="menu-subtitle">Escolha seu modo de jogo:</p>
             
             <button id="start-online-btn" class="menu-btn primary">
-                <i class="fas fa-globe"></i> Procurar Partida Online
+                <i class="fas fa-globe"></i> Jogo Online
             </button>
 
             <button id="start-offline-btn" class="menu-btn secondary">
-                <i class="fas fa-robot"></i> Jogar contra o PC
+                <i class="fas fa-robot"></i> Contra o PC
             </button>
+        </div>
+
+        <div id="difficulty-menu" class="menu-box hidden">
+            <h2>Dificuldade</h2>
+            <p class="menu-subtitle">Quão esperto é o computador?</p>
+
+            <button class="menu-btn difficulty-btn" data-level="easy" style="background-color: #2ecc71;">
+                <i class="fas fa-smile"></i> Fácil
+            </button>
+            <button class="menu-btn difficulty-btn" data-level="medium" style="background-color: #f39c12;">
+                <i class="fas fa-meh"></i> Médio
+            </button>
+            <button class="menu-btn difficulty-btn" data-level="hard" style="background-color: #e74c3c;">
+                <i class="fas fa-dizzy"></i> Difícil
+            </button>
+
+            <button id="back-to-menu-btn" class="menu-link">Voltar</button>
         </div>
     </div>
 
@@ -35,11 +56,8 @@
             <div id="game-board">
                 <div id="heaps-container"></div>
             </div>
-    
-            <div id="controls">
-                <button id="confirm-move-btn">Confirmar Jogada</button>
-                <button id="exit-btn" class="hidden">Sair</button>
-            </div>
+            
+            <div style="height: 100px; display: block; width: 100%;"></div>
         </div>
     </div>
 
@@ -60,6 +78,11 @@
             <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
         </div>
     </aside>
+
+    <div id="controls">
+        <button id="confirm-move-btn">Confirmar Jogada</button>
+        <button id="exit-btn" class="hidden">Sair</button>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>

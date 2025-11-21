@@ -1,78 +1,140 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Conexão com o servidor (Socket.io)
     const socket = io(); 
 
-    // --- Variáveis de Estado ---
+    // =========================================================
+    // VARIÁVEIS DE ESTADO
+    // =========================================================
     let heaps = [];
     let myPlayerId = null;
-    let currentTurnId = null; // Em offline: 1 = Player, 2 = PC
+    let currentTurnId = null; // Online: SocketID | Offline: 1 (Player), 2 (PC)
     let roomID = null;
     let isMyTurn = false;
     let selectedHeapIndex = null;
     let gameOver = false;
-    
-    // NOVO: Variável para saber o modo atual
     let gameMode = null; // 'ONLINE' ou 'OFFLINE'
+    let pcDifficulty = 'medium'; // 'easy', 'medium', 'hard'
 
-    // --- Elementos DOM ---
+    // =========================================================
+    // ELEMENTOS DO DOM
+    // =========================================================
+    // Botão de Tema
+    const themeToggleBtn = document.getElementById('theme-toggle');
+
+    // Menus
     const menuOverlay = document.getElementById('menu-overlay');
+    const mainMenu = document.getElementById('main-menu');
+    const difficultyMenu = document.getElementById('difficulty-menu');
+    
+    // Botões do Menu
     const startOnlineBtn = document.getElementById('start-online-btn');
-    const startOfflineBtn = document.getElementById('start-offline-btn'); // Novo
+    const startOfflineBtn = document.getElementById('start-offline-btn');
+    const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+    const backToMenuBtn = document.getElementById('back-to-menu-btn');
+
+    // Jogo
     const gameContainer = document.getElementById('game-container');
     const heapsContainer = document.getElementById('heaps-container');
     const statusMessage = document.getElementById('status-message');
     const confirmMoveBtn = document.getElementById('confirm-move-btn');
     const exitBtn = document.getElementById('exit-btn');
     
+    // Chat
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
     const chatMessages = document.getElementById('chat-messages');
     const connStatus = document.getElementById('connection-status');
     const connDot = document.querySelector('.dot');
 
+
     // =========================================================
-    // 1. MENU E SELEÇÃO DE MODO
+    // 1. LÓGICA DE TEMA (CLARO/ESCURO)
+    // =========================================================
+    
+    // Verifica se já tem preferência salva no navegador
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>'; // Ícone de Sol
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        
+        // Troca o ícone e salva na memória
+        if (document.body.classList.contains('light-mode')) {
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', 'light');
+        } else {
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+            localStorage.setItem('theme', 'dark');
+        }
+    });
+
+
+    // =========================================================
+    // 2. MENU E SELEÇÃO DE MODO
     // =========================================================
 
     // --- MODO ONLINE ---
     startOnlineBtn.addEventListener('click', () => {
         gameMode = 'ONLINE';
+        // Feedback visual de carregamento
         startOnlineBtn.disabled = true;
         startOfflineBtn.disabled = true;
-        startOnlineBtn.textContent = "Procurando...";
+        startOnlineBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procurando...';
         
         addSystemMessage("Conectando ao saguão online...");
         socket.emit('findGame');
     });
 
-    // --- MODO OFFLINE (CONTRA PC) ---
+    // --- MODO OFFLINE (Botão Inicial) ---
     startOfflineBtn.addEventListener('click', () => {
-        gameMode = 'OFFLINE';
-        startGameOffline();
+        // Esconde menu principal, mostra menu de dificuldade
+        mainMenu.classList.add('hidden');
+        difficultyMenu.classList.remove('hidden');
     });
 
-    // --- Botão Sair (Voltar ao menu) ---
-    exitBtn.addEventListener('click', () => {
-        location.reload(); // Maneira mais simples de resetar tudo
+    // --- VOLTAR (Do submenu para o principal) ---
+    backToMenuBtn.addEventListener('click', () => {
+        difficultyMenu.classList.add('hidden');
+        mainMenu.classList.remove('hidden');
     });
+
+    // --- SELEÇÃO DE DIFICULDADE ---
+    difficultyBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            pcDifficulty = btn.dataset.level; // Lê 'easy', 'medium' ou 'hard' do HTML
+            gameMode = 'OFFLINE';
+            startGameOffline();
+        });
+    });
+
+    // --- BOTÃO SAIR (Durante o jogo) ---
+    exitBtn.addEventListener('click', () => {
+        location.reload(); // Recarrega a página para resetar tudo
+    });
+
 
     // =========================================================
-    // 2. LÓGICA ONLINE (SOCKET)
+    // 3. LÓGICA ONLINE (SOCKET.IO)
     // =========================================================
 
     socket.on('connect', () => {
         connStatus.textContent = "Conectado";
-        connDot.style.background = "#2ecc71";
+        connDot.style.background = "#2ecc71"; // Verde
     });
 
     socket.on('disconnect', () => {
         connStatus.textContent = "Desconectado";
-        connDot.style.background = "#e74c3c";
+        connDot.style.background = "#e74c3c"; // Vermelho
     });
 
     socket.on('waitingForOpponent', () => {
         statusMessage.textContent = "Aguardando jogador online...";
     });
 
+    // O Jogo Começou (Online)
     socket.on('gameStart', (data) => {
         roomID = data.roomID;
         heaps = data.state.heaps;
@@ -80,15 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
         myPlayerId = socket.id;
         gameOver = false;
 
-        // Esconde menu
+        // Transição de UI
         menuOverlay.classList.add('hidden');
         gameContainer.classList.remove('hidden');
-        exitBtn.classList.add('hidden'); // Não pode sair no meio do online (simplificação)
+        exitBtn.classList.add('hidden'); // Simplificação: sem sair no online
 
         addSystemMessage("Oponente encontrado! Partida Online iniciada.");
         updateGameState();
     });
 
+    // Recebeu movimento do oponente
     socket.on('opponentMove', (data) => {
         if (gameMode !== 'ONLINE') return;
         
@@ -96,55 +159,77 @@ document.addEventListener('DOMContentLoaded', () => {
         const total = heaps.reduce((a,b) => a+b, 0);
         
         if (total === 0) {
-            endGame(false); // Perdi
+            endGame(false); // Eu perdi (oponente pegou a última)
         } else {
-            currentTurnId = socket.id;
+            currentTurnId = socket.id; // Passa a vez para mim
             updateGameState();
         }
     });
 
+
     // =========================================================
-    // 3. LÓGICA OFFLINE (PC / IA)
+    // 4. LÓGICA OFFLINE (IA / COMPUTADOR)
     // =========================================================
 
     function startGameOffline() {
         heaps = [3, 5, 7];
         currentTurnId = 1; // 1 = Humano, 2 = PC
         gameOver = false;
-        myPlayerId = 1; // Apenas para consistência lógica
 
+        // Transição de UI
         menuOverlay.classList.add('hidden');
         gameContainer.classList.remove('hidden');
-        exitBtn.classList.remove('hidden'); // Mostra botão de sair
+        exitBtn.classList.remove('hidden'); // Pode sair no offline
 
-        addSystemMessage("Modo Offline iniciado contra a IA.");
+        // Texto amigável da dificuldade
+        let diffText = "Médio";
+        if(pcDifficulty === 'easy') diffText = "Fácil";
+        if(pcDifficulty === 'hard') diffText = "Difícil";
+
+        addSystemMessage(`Modo Offline iniciado (Dificuldade: ${diffText}).`);
         updateGameState();
     }
 
     function executeComputerMove() {
         if (gameOver) return;
 
-        // Estratégia Matemática (XOR / Nim-Sum)
-        const move = findOptimalMove(heaps);
+        let move;
+        const winningMove = findOptimalMove(heaps);
+        const randomMove = findRandomMove(heaps);
+
+        // Lógica de "Erro Proposital" baseada na dificuldade
+        if (pcDifficulty === 'easy') {
+            // 90% de chance de errar (jogar aleatório)
+            move = (Math.random() > 0.1) ? randomMove : winningMove;
         
+        } else if (pcDifficulty === 'medium') {
+            // 40% de chance de acertar (jogar perfeito)
+            move = (Math.random() > 0.6) ? winningMove : randomMove;
+
+        } else {
+            // Hard: Sempre tenta ganhar
+            move = winningMove;
+        }
+
+        // Aplica o movimento
         heaps[move.heapIndex] -= move.numToRemove;
         addSystemMessage(`PC removeu ${move.numToRemove} peça(s) do monte ${move.heapIndex + 1}`);
 
         const total = heaps.reduce((a,b) => a+b, 0);
         if (total === 0) {
-            endGame(false); // PC ganhou (eu perdi)
+            endGame(false); // PC Venceu (eu perdi)
         } else {
-            currentTurnId = 1; // Volta para o humano
+            currentTurnId = 1; // Volta a vez para o Humano
             updateGameState();
         }
     }
 
-    // Lógica da IA (XOR)
+    // Estratégia Perfeita (Nim-Sum / XOR)
     function findOptimalMove(currentHeaps) {
         const nimSum = currentHeaps.reduce((sum, heapSize) => sum ^ heapSize, 0);
 
-        // Se NimSum != 0, existe jogada vencedora
         if (nimSum !== 0) {
+            // Existe jogada vencedora
             for (let i = 0; i < currentHeaps.length; i++) {
                 const targetSize = currentHeaps[i] ^ nimSum;
                 if (targetSize < currentHeaps[i]) {
@@ -152,46 +237,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
-        // Se NimSum == 0 (posição perdedora) ou falha, joga aleatório
+        // Se já estiver perdendo, joga qualquer coisa
+        return findRandomMove(currentHeaps);
+    }
+
+    // Estratégia Aleatória
+    function findRandomMove(currentHeaps) {
         const nonEmpty = currentHeaps.map((s, i) => ({s, i})).filter(h => h.s > 0);
         const randomHeap = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
-        return { heapIndex: randomHeap.i, numToRemove: 1 };
+        const numToRemove = Math.floor(Math.random() * randomHeap.s) + 1;
+        return { heapIndex: randomHeap.i, numToRemove: numToRemove };
     }
 
 
     // =========================================================
-    // 4. CONTROLE DE ESTADO E RENDERIZAÇÃO (COMUM)
+    // 5. CONTROLE DO JOGO (RENDERIZAÇÃO E INTERAÇÃO)
     // =========================================================
 
     function updateGameState() {
         renderHeaps();
         
-        // Verifica de quem é a vez
+        // Define se é minha vez baseada no modo
         if (gameMode === 'ONLINE') {
             isMyTurn = (socket.id === currentTurnId);
         } else {
-            // Offline: Turno 1 é meu
             isMyTurn = (currentTurnId === 1);
         }
         
+        // Atualiza UI
         if (isMyTurn) {
             statusMessage.textContent = "Sua Vez!";
-            statusMessage.style.color = "#2ecc71";
+            statusMessage.style.color = "#2ecc71"; // Verde
             enableControls(true);
         } else {
             statusMessage.textContent = (gameMode === 'ONLINE') ? "Vez do Oponente..." : "Computador pensando...";
-            statusMessage.style.color = "#e74c3c";
+            statusMessage.style.color = "#e74c3c"; // Vermelho/Laranja
             enableControls(false);
 
-            // Se for Offline e vez do PC, chama a IA
+            // Se for offline e vez do PC, agendar jogada
             if (gameMode === 'OFFLINE' && !gameOver) {
-                setTimeout(executeComputerMove, 1500); // Delay para parecer que pensa
+                setTimeout(executeComputerMove, 1200); // Delay de 1.2s
             }
         }
     }
 
-    // Ação de Confirmar Jogada
+    // Botão "Confirmar Jogada"
     confirmMoveBtn.addEventListener('click', () => {
         if (!isMyTurn) return;
 
@@ -206,31 +296,28 @@ document.addEventListener('DOMContentLoaded', () => {
         // Atualiza estado local
         heaps[selectedHeapIndex] -= numToRemove;
         
-        // AÇÃO ESPECÍFICA POR MODO
+        // Se Online, avisa o servidor
         if (gameMode === 'ONLINE') {
             socket.emit('makeMove', {
                 roomID: roomID,
                 heapIndex: selectedHeapIndex,
                 numToRemove: numToRemove
             });
-        } else {
-            // Offline: nada a enviar, apenas logar
-            // (A troca de turno acontece na verificação de vitória abaixo)
         }
 
         selectedHeapIndex = null;
         
-        // Verifica vitória
+        // Verifica vitória imediatamente
         const total = heaps.reduce((a,b) => a+b, 0);
         if (total === 0) {
-            endGame(true); // Eu ganhei
+            endGame(true); // Eu ganhei!
         } else {
             isMyTurn = false;
             // Troca o ID do turno
             if (gameMode === 'ONLINE') {
-                currentTurnId = "opponent"; 
+                currentTurnId = "opponent"; // Espera servidor
             } else {
-                currentTurnId = 2; // Passa para o PC
+                currentTurnId = 2; // Passa para PC
             }
             updateGameState();
         }
@@ -243,15 +330,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (iWon) {
             statusMessage.textContent = "VOCÊ VENCEU!";
-            statusMessage.style.color = "#f1c40f";
+            statusMessage.style.color = "#f1c40f"; // Dourado
             addSystemMessage("Fim de jogo: Vitória!");
         } else {
-            statusMessage.textContent = (gameMode === 'ONLINE') ? "Oponente Venceu." : "Computador Venceu.";
-            statusMessage.style.color = "#95a5a6";
+            const loserText = (gameMode === 'ONLINE') ? "Oponente Venceu." : "Computador Venceu.";
+            statusMessage.textContent = loserText;
+            statusMessage.style.color = "#95a5a6"; // Cinza
             addSystemMessage("Fim de jogo: Derrota.");
         }
         
-        // Mostra botão de sair se estiver online e acabou
+        // Se estiver Online, mostra botão de sair no final
         if (gameMode === 'ONLINE') {
             exitBtn.classList.remove('hidden');
             exitBtn.textContent = "Voltar ao Menu";
@@ -259,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Renderiza o tabuleiro HTML
     function renderHeaps() {
         heapsContainer.innerHTML = '';
         heaps.forEach((count, index) => {
@@ -281,12 +370,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Clique nas peças
     function handleObjectClick(e) {
         if (!isMyTurn || gameOver) return;
 
         const obj = e.target;
         const hIndex = parseInt(obj.dataset.heapIndex);
 
+        // Regra: Só pode pegar de um monte
         if (selectedHeapIndex !== null && selectedHeapIndex !== hIndex) {
             alert("Você só pode remover peças de um único monte!");
             return;
@@ -294,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedHeapIndex = hIndex;
         obj.classList.toggle('selected');
 
+        // Se desmarcou tudo, libera seleção de monte
         if (document.querySelectorAll('.object.selected').length === 0) {
             selectedHeapIndex = null;
         }
@@ -304,8 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
         heapsContainer.style.pointerEvents = enable ? 'auto' : 'none';
     }
 
+
     // =========================================================
-    // 5. CHAT (Híbrido)
+    // 6. CHAT (HÍBRIDO)
     // =========================================================
 
     function sendMessage() {
@@ -314,9 +407,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (gameMode === 'ONLINE') {
                 socket.emit('chatMessage', text);
             } else {
-                // Modo Offline: Apenas exibe sua mensagem e uma resposta fake do PC
+                // Offline: Adiciona direto
                 addMessageToChat(text, 'Você', 'mine');
-                if(text.toLowerCase().includes('ola') || text.toLowerCase().includes('oi')) {
+                
+                // Easter Egg Offline
+                const lowerText = text.toLowerCase();
+                if(lowerText.includes('ola') || lowerText.includes('oi')) {
                     setTimeout(() => addMessageToChat("Bip Bop... Olá Humano.", "Computador", "other"), 800);
                 }
             }
@@ -324,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Recebe mensagem do servidor (Online)
     socket.on('chatMessage', (data) => {
         const isMine = data.id === socket.id;
         addMessageToChat(data.text, isMine ? 'Você' : 'Oponente', isMine ? 'mine' : 'other');
@@ -339,19 +436,19 @@ document.addEventListener('DOMContentLoaded', () => {
             authorDiv.textContent = author;
             msgDiv.appendChild(authorDiv);
         }
-
         const textSpan = document.createElement('span');
         textSpan.textContent = text;
         msgDiv.appendChild(textSpan);
 
         chatMessages.appendChild(msgDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
     }
 
     function addSystemMessage(text) {
         addMessageToChat(text, 'Sistema', 'system');
     }
 
+    // Listeners do Chat
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
