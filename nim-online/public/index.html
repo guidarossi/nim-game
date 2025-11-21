@@ -11,10 +11,16 @@
 
     <div id="menu-overlay">
         <div id="menu-container">
-            <h2>Jogo de Nim Online</h2>
-            <p style="color: #bdc3c7; margin-bottom: 20px;">Desafie jogadores reais!</p>
+            <h2>Jogo de Nim</h2>
+            <p style="color: #bdc3c7; margin-bottom: 20px;">Escolha seu modo de jogo:</p>
             
-            <button id="start-game-btn">Procurar Partida Online</button>
+            <button id="start-online-btn" class="menu-btn primary">
+                <i class="fas fa-globe"></i> Procurar Partida Online
+            </button>
+
+            <button id="start-offline-btn" class="menu-btn secondary">
+                <i class="fas fa-robot"></i> Jogar contra o PC
+            </button>
         </div>
     </div>
 
@@ -27,25 +33,25 @@
             </div>
     
             <div id="game-board">
-                <div id="heaps-container">
-                    </div>
+                <div id="heaps-container"></div>
             </div>
     
             <div id="controls">
                 <button id="confirm-move-btn">Confirmar Jogada</button>
+                <button id="exit-btn" class="hidden">Sair</button>
             </div>
         </div>
     </div>
 
     <aside id="sidebar">
         <div class="sidebar-header">
-            <h3><i class="fas fa-comments"></i> Chat Global</h3>
-            <span class="online-status"><span class="dot"></span> Online</span>
+            <h3><i class="fas fa-comments"></i> Chat</h3>
+            <span class="online-status"><span class="dot"></span> <span id="connection-status">Offline</span></span>
         </div>
 
         <div id="chat-messages">
             <div class="message system">
-                <span class="msg-text">Bem-vindo ao chat!</span>
+                <span class="msg-text">Bem-vindo!</span>
             </div>
         </div>
 
