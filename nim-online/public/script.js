@@ -2,6 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const socket = io(); 
 
     // =========================================================
+    // --- VARIÁVEIS DE LOGIN ---
+    // =========================================================
+    let currentUser = null;
+    let isRegistering = false;
+
+    // =========================================================
     // VARIÁVEIS DE ESTADO
     // =========================================================
     let heaps = [];
@@ -66,6 +72,73 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnToggleCam = document.getElementById('btn-toggle-cam');
     const btnStopCall = document.getElementById('btn-stop-call');
 
+    // =========================================================
+    // ELEMENTOS LOGIN
+    // =========================================================
+    const loginOverlay = document.getElementById('login-overlay');
+    const authForm = document.getElementById('auth-form');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const authBtn = document.getElementById('auth-btn');
+    const toggleAuthBtn = document.getElementById('toggle-auth');
+    const formTitle = document.getElementById('form-title');
+    const authError = document.getElementById('auth-error');
+
+    // 1. Alternar entre Login e Cadastro
+    toggleAuthBtn.addEventListener('click', () => {
+        isRegistering = !isRegistering;
+        if (isRegistering) {
+            formTitle.textContent = "Criar Conta";
+            authBtn.textContent = "Cadastrar";
+            toggleAuthBtn.textContent = "Já tenho conta";
+        } else {
+            formTitle.textContent = "Bem-vindo";
+            authBtn.textContent = "Entrar";
+            toggleAuthBtn.textContent = "Cadastre-se";
+        }
+        authError.classList.add('hidden');
+    });
+
+    // 2. Enviar Formulário
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = usernameInput.value;
+        const password = passwordInput.value;
+        const endpoint = isRegistering ? '/api/register' : '/api/login';
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                if (isRegistering) {
+                    // Sucesso no cadastro, volta para login
+                    alert("Conta criada! Agora faça login.");
+                    toggleAuthBtn.click(); // Troca para tela de login
+                } else {
+                    // Sucesso no Login
+                    currentUser = data.user;
+                    loginOverlay.classList.add('hidden'); // Esconde login
+                    // Mostra menu principal (já está no HTML, mas garante visibilidade)
+                    mainMenu.classList.remove('hidden');
+                    
+                    // Opcional: Emitir socket com nome do usuário
+                    // socket.emit('identify', currentUser.username);
+                }
+            } else {
+                authError.textContent = data.message;
+                authError.classList.remove('hidden');
+            }
+        } catch (err) {
+            authError.textContent = "Erro de conexão com o servidor.";
+            authError.classList.remove('hidden');
+        }
+    });
 
     // =========================================================
     // 1. TEMA (CLARO/ESCURO)

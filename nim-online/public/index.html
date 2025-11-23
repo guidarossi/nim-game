@@ -8,6 +8,30 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 id="form-title">Bem-vindo</h2>
+            
+            <form id="auth-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Usuário" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Senha" required>
+                </div>
+                
+                <button type="submit" id="auth-btn">Entrar</button>
+                <p id="auth-error" class="error-msg hidden"></p>
+            </form>
+
+            <p class="toggle-text">
+                Não tem conta? <span id="toggle-auth">Cadastre-se</span>
+            </p>
+        </div>
+    </div>
     
     <div id="game-over-overlay" class="hidden">
         <div class="go-content">
