@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameMode = null; // 'ONLINE' ou 'OFFLINE'
     let pcDifficulty = 'medium'; 
     
-    // Variável para gerenciar a Câmera (Vem do webrtc.js)
     let rtcManager = null;
 
     // =========================================================
@@ -41,6 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmMoveBtn = document.getElementById('confirm-move-btn');
     const exitBtn = document.getElementById('exit-btn');
     
+    // Tela de Fim de Jogo (NOVO)
+    const gameOverOverlay = document.getElementById('game-over-overlay');
+    const goTitle = document.getElementById('go-title');
+    const goMessage = document.getElementById('go-message');
+    const goTimerContainer = document.getElementById('go-timer-container');
+    const goTimer = document.getElementById('go-timer');
+    const goBackBtn = document.getElementById('go-back-btn');
+    
     // Chat & Emojis
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
@@ -50,11 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const emojiBtn = document.getElementById('emoji-btn');
     const emojiPicker = document.getElementById('emoji-picker');
 
-    // Câmera (WebRTC) - Novos IDs da Barra de Controle
+    // Câmera (WebRTC)
     const cameraWrapper = document.getElementById('camera-wrapper');
     const initialControls = document.getElementById('initial-controls');
     const activeControls = document.getElementById('active-controls');
-    
     const btnJoinCall = document.getElementById('btn-join-call');
     const btnToggleMic = document.getElementById('btn-toggle-mic');
     const btnToggleCam = document.getElementById('btn-toggle-cam');
@@ -87,16 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. EMOJIS
     // =========================================================
 
-    const emojiList = [
-        '😀','😁','😂','🤣','😉','😊','😍','😎','🤔','😐',
-        '😑','😶','🙄','😏','😣','😥','😮','😪','😫','😴',
-        '😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑',
-        '😲','☹️','😖','😤','😭','🤯','😱','🥵','🥶','😡',
-        '🤬','😷','🤒','🤕','🤢','🤮','🤧','😇','🥳','🥺',
-        '👍','👎','👊','✌️','👌','✋','💪','🙏','👏','🙌',
-        '❤️','🧡','💛','💚','💙','💜','🖤','💔','🔥','✨',
-        '🎉','🏆','🎲','🎮','🤖','👻','👽','💩','🤡','🇧🇷'
-    ];
+    const emojiList = ['😀','😁','😂','🤣','😉','😊','😍','😎','🤔','😐','😑','😶','🙄','😏','😣','😥','😮','😪','😫','😴','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','😖','😤','😭','🤯','😱','🥵','🥶','😡','🤬','😷','🤒','🤕','🤢','🤮','🤧','😇','🥳','🥺','👍','👎','👊','✌️','👌','✋','💪','🙏','👏','🙌','❤️','🧡','💛','💚','💙','💜','🖤','💔','🔥','✨','🎉','🏆','🎲','🎮','🤖','👻','👽','💩','🤡','🇧🇷'];
 
     function renderEmojis() {
         emojiPicker.innerHTML = '';
@@ -160,16 +157,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Sair
+    // Sair (Manual durante jogo)
     exitBtn.addEventListener('click', () => {
-        // Desliga câmera ao sair
         if (rtcManager) rtcManager.stopLocalStream();
+        location.reload();
+    });
+
+    // Botão Voltar (na tela de Game Over Offline)
+    goBackBtn.addEventListener('click', () => {
         location.reload();
     });
 
 
     // =========================================================
-    // 4. ONLINE & WEBRTC (CÂMERA AVANÇADA)
+    // 4. ONLINE & WEBRTC
     // =========================================================
 
     socket.on('connect', () => {
@@ -184,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.textContent = "Aguardando jogador online...";
     });
 
-    // INÍCIO DO JOGO ONLINE
     socket.on('gameStart', (data) => {
         roomID = data.roomID;
         heaps = data.state.heaps;
@@ -195,24 +195,19 @@ document.addEventListener('DOMContentLoaded', () => {
         menuOverlay.classList.add('hidden');
         gameContainer.classList.remove('hidden');
         exitBtn.classList.add('hidden'); 
-
-        // --- CONFIGURAÇÃO DA CÂMERA ---
-        // Mostra o wrapper da câmera
-        cameraWrapper.classList.remove('hidden');
         
-        // Mostra o botão "Entrar", esconde os controles ativos
+        // Câmera
+        cameraWrapper.classList.remove('hidden');
         initialControls.classList.remove('hidden');
         activeControls.classList.add('hidden');
         
-        // Instancia a classe WebRTCManager
         rtcManager = new WebRTCManager(socket, myPlayerId, roomID);
-        rtcManager.createPeerConnection(); // Prepara a conexão silenciosa
+        rtcManager.createPeerConnection(); 
 
         addSystemMessage("Partida Online! Entre na chamada para conversar.");
         updateGameState();
     });
 
-    // Movimento do Oponente
     socket.on('opponentMove', (data) => {
         if (gameMode !== 'ONLINE') return;
         
@@ -226,35 +221,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NOVOS CONTROLES DE CÂMERA ---
-
-    // 1. Botão Entrar na Chamada
+    // --- Controles Câmera ---
     btnJoinCall.addEventListener('click', async () => {
         if (!rtcManager) return;
-        
-        // Inicia hardware (Vídeo e Áudio)
         const success = await rtcManager.startLocalStream();
-        
         if (success) {
-            // Atualiza UI: Esconde "Entrar", mostra "Barra de Controle"
             initialControls.classList.add('hidden');
             activeControls.classList.remove('hidden');
-            
-            // Reseta ícones para estado "Ligado"
             resetControlIcons();
-            
-            // Renegocia conexão (Envia Oferta)
             rtcManager.createOffer();
-            
             addSystemMessage("Você entrou na chamada.");
         }
     });
-
-    // 2. Mutar/Desmutar Microfone
     btnToggleMic.addEventListener('click', () => {
         if (!rtcManager) return;
         const isEnabled = rtcManager.toggleAudio();
-        
         if (isEnabled) {
             btnToggleMic.classList.remove('off');
             btnToggleMic.innerHTML = '<i class="fas fa-microphone"></i>';
@@ -263,12 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btnToggleMic.innerHTML = '<i class="fas fa-microphone-slash"></i>';
         }
     });
-
-    // 3. Ligar/Desligar Vídeo
     btnToggleCam.addEventListener('click', () => {
         if (!rtcManager) return;
         const isEnabled = rtcManager.toggleVideo();
-        
         if (isEnabled) {
             btnToggleCam.classList.remove('off');
             btnToggleCam.innerHTML = '<i class="fas fa-video"></i>';
@@ -277,20 +255,13 @@ document.addEventListener('DOMContentLoaded', () => {
             btnToggleCam.innerHTML = '<i class="fas fa-video-slash"></i>';
         }
     });
-
-    // 4. Sair da Chamada (Hangup)
     btnStopCall.addEventListener('click', () => {
         if (!rtcManager) return;
-        
         rtcManager.stopLocalStream();
-        
-        // Restaura UI inicial
         activeControls.classList.add('hidden');
         initialControls.classList.remove('hidden');
-        
         addSystemMessage("Você saiu da chamada.");
     });
-
     function resetControlIcons() {
         btnToggleMic.classList.remove('off');
         btnToggleMic.innerHTML = '<i class="fas fa-microphone"></i>';
@@ -305,14 +276,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startGameOffline() {
         heaps = [3, 5, 7];
-        currentTurnId = 1; // 1 = Humano
+        currentTurnId = 1; 
         gameOver = false;
 
         menuOverlay.classList.add('hidden');
         gameContainer.classList.remove('hidden');
         exitBtn.classList.remove('hidden');
-        
-        // Esconde câmera no offline
         cameraWrapper.classList.add('hidden');
 
         let diffText = (pcDifficulty === 'easy') ? "Fácil" : (pcDifficulty === 'hard') ? "Difícil" : "Médio";
@@ -322,11 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function executeComputerMove() {
         if (gameOver) return;
-
         let move;
         const winningMove = findOptimalMove(heaps);
         const randomMove = findRandomMove(heaps);
-
         if (pcDifficulty === 'easy') move = (Math.random() > 0.1) ? randomMove : winningMove;
         else if (pcDifficulty === 'medium') move = (Math.random() > 0.6) ? winningMove : randomMove;
         else move = winningMove;
@@ -341,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateGameState();
         }
     }
-
     function findOptimalMove(currentHeaps) {
         const nimSum = currentHeaps.reduce((sum, heapSize) => sum ^ heapSize, 0);
         if (nimSum !== 0) {
@@ -352,7 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return findRandomMove(currentHeaps);
     }
-
     function findRandomMove(currentHeaps) {
         const nonEmpty = currentHeaps.map((s, i) => ({s, i})).filter(h => h.s > 0);
         const randomHeap = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
@@ -367,12 +332,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateGameState() {
         renderHeaps();
-        
-        if (gameMode === 'ONLINE') {
-            isMyTurn = (socket.id === currentTurnId);
-        } else {
-            isMyTurn = (currentTurnId === 1);
-        }
+        if (gameMode === 'ONLINE') isMyTurn = (socket.id === currentTurnId);
+        else isMyTurn = (currentTurnId === 1);
         
         if (isMyTurn) {
             statusMessage.textContent = "Sua Vez!";
@@ -382,10 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             statusMessage.textContent = (gameMode === 'ONLINE') ? "Vez do Oponente..." : "Computador pensando...";
             statusMessage.style.color = "#e74c3c";
             enableControls(false);
-
-            if (gameMode === 'OFFLINE' && !gameOver) {
-                setTimeout(executeComputerMove, 1200);
-            }
+            if (gameMode === 'OFFLINE' && !gameOver) setTimeout(executeComputerMove, 1200);
         }
     }
 
@@ -397,9 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const numToRemove = selectedObjects.length;
         heaps[selectedHeapIndex] -= numToRemove;
         
-        if (gameMode === 'ONLINE') {
-            socket.emit('makeMove', { roomID: roomID, heapIndex: selectedHeapIndex, numToRemove: numToRemove });
-        }
+        if (gameMode === 'ONLINE') socket.emit('makeMove', { roomID: roomID, heapIndex: selectedHeapIndex, numToRemove: numToRemove });
 
         selectedHeapIndex = null;
         
@@ -413,33 +369,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ---------------------------------------------------------
+    // FUNÇÃO DE FIM DE JOGO (OVERLAY + TIMER VISUAL)
+    // ---------------------------------------------------------
     function endGame(iWon) {
         gameOver = true;
         renderHeaps();
         enableControls(false);
         
-        // Se jogo acabou, desliga câmera e limpa UI
-        if (rtcManager) {
-            rtcManager.stopLocalStream();
-            activeControls.classList.add('hidden');
-            initialControls.classList.remove('hidden');
-        }
-        cameraWrapper.classList.add('hidden');
+        // Exibe o Overlay de Fim de Jogo
+        gameOverOverlay.classList.remove('hidden');
 
         if (iWon) {
-            statusMessage.textContent = "VOCÊ VENCEU!";
-            statusMessage.style.color = "#f1c40f";
+            goTitle.textContent = "VITÓRIA!";
+            goTitle.style.color = "#f1c40f"; // Dourado
+            goMessage.textContent = "Parabéns! Você dominou a estratégia.";
             addSystemMessage("Fim de jogo: Vitória!");
         } else {
-            statusMessage.textContent = (gameMode === 'ONLINE') ? "Oponente Venceu." : "Computador Venceu.";
-            statusMessage.style.color = "#95a5a6";
+            goTitle.textContent = "DERROTA";
+            goTitle.style.color = "#e74c3c"; // Vermelho
+            goMessage.textContent = (gameMode === 'ONLINE') 
+                ? "O oponente foi mais esperto desta vez." 
+                : "A máquina venceu. Tente novamente!";
             addSystemMessage("Fim de jogo: Derrota.");
         }
-        
+
         if (gameMode === 'ONLINE') {
-            exitBtn.classList.remove('hidden');
-            exitBtn.textContent = "Voltar ao Menu";
-            exitBtn.onclick = () => location.reload();
+            // Configuração Online: Timer de 5 segundos
+            goTimerContainer.classList.remove('hidden');
+            goBackBtn.classList.add('hidden');
+            
+            let timeLeft = 5;
+            goTimer.textContent = timeLeft;
+
+            const countdownInterval = setInterval(() => {
+                timeLeft--;
+                goTimer.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    
+                    // Limpeza Final
+                    if (rtcManager) rtcManager.stopLocalStream();
+                    location.reload();
+                }
+            }, 1000);
+
+        } else {
+            // Configuração Offline: Botão Manual
+            goTimerContainer.classList.add('hidden');
+            goBackBtn.classList.remove('hidden');
         }
     }
 
@@ -448,12 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
         heaps.forEach((count, index) => {
             const heapDiv = document.createElement('div');
             heapDiv.className = 'heap';
-            
             const label = document.createElement('div');
             label.className = 'heap-label';
             label.textContent = `Monte ${index + 1} (${count})`;
             heapDiv.appendChild(label);
-
             for(let i=0; i<count; i++) {
                 const obj = document.createElement('div');
                 obj.className = 'object';
@@ -498,12 +475,10 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInput.value = '';
         }
     }
-
     socket.on('chatMessage', (data) => {
         const isMine = data.id === socket.id;
         addMessageToChat(data.text, isMine ? 'Você' : 'Oponente', isMine ? 'mine' : 'other');
     });
-
     function addMessageToChat(text, author, type) {
         const msgDiv = document.createElement('div');
         msgDiv.classList.add('message', type);
@@ -519,13 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.appendChild(msgDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-
-    function addSystemMessage(text) {
-        addMessageToChat(text, 'Sistema', 'system');
-    }
-
+    function addSystemMessage(text) { addMessageToChat(text, 'Sistema', 'system'); }
     sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
+    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 });

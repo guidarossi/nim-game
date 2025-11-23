@@ -409,3 +409,86 @@ body.light-mode .emoji-item:hover {
 @media (max-width: 1024px) {
     .desktop-only { display: none !important; }
 }
+
+/* ============================================
+   TELA DE FIM DE JOGO (OVERLAY)
+   ============================================ */
+
+#game-over-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.92); /* Fundo bem escuro */
+    z-index: 300; /* Acima de TUDO, inclusive câmera */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.5s ease-out;
+}
+
+.go-content {
+    text-align: center;
+    color: white;
+    max-width: 600px;
+    padding: 20px;
+}
+
+#go-title {
+    font-size: 4em;
+    margin: 0 0 20px 0;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    text-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+#go-message {
+    font-size: 1.5em;
+    color: #bdc3c7;
+    margin-bottom: 40px;
+}
+
+/* O Contador Gigante */
+#go-timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+#go-timer {
+    font-size: 5em;
+    font-weight: bold;
+    color: white;
+    background: var(--bg-card);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid var(--border-color);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+    animation: pulse 1s infinite;
+}
+
+/* Botão para o modo offline */
+#go-back-btn {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+#go-back-btn:hover { transform: scale(1.05); background: #2980b9; }
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
